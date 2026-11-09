@@ -8,21 +8,52 @@ const IC = {
 };
 const COLOR = { claude: "#d97757", codex: "#e5e7eb" };
 
-// 歌名：超出宽度时首尾相接循环滚动；只在换歌时重建，避免动画重置
+// 歌名：最多显示约三个中文字宽（42px），多余的用小号省略号
 let shownTitle = null;
 function setTitle(text) {
   if (text === shownTitle) return;
   shownTitle = text;
-  const el = $("title");
+  const el = $("title"), MAX = 42;
+  el.innerHTML = "<span></span>";
+  const s = el.firstChild;
+  s.textContent = text;
+  if (s.offsetWidth > MAX) {
+    const ch = Array.from(text);
+    let n = ch.length;
+    while (n > 1) { s.textContent = ch.slice(0, n).join(""); if (s.offsetWidth <= MAX) break; n--; }
+    s.insertAdjacentHTML("beforeend", "<small>…</small>");
+  }
+}
+
+// 歌手：放不下时无缝循环滚动；只在变化时重建
+let shownArtist = null;
+function setArtist(text) {
+  if (text === shownArtist) return;
+  shownArtist = text;
+  const el = $("artist");
   el.classList.remove("roll");
   el.innerHTML = "<span></span>";
   el.firstChild.textContent = text;
   const w = el.firstChild.offsetWidth;
   if (w > el.clientWidth) {
     el.firstChild.textContent = text + "　　" + text + "　　";
-    el.style.setProperty("--dur", (w / 25) + "s");
+    el.style.setProperty("--ad", ((w + 28) / 22) + "s");
     el.classList.add("roll");
   }
+}
+
+// 歌词：只在句子变化时重建；超出框宽则在框内来回滚动
+let shownLrc = null;
+function setLyric(text) {
+  text = text || "";
+  if (text === shownLrc) return;
+  shownLrc = text;
+  const el = $("lrc");
+  el.querySelectorAll("span").forEach(o => { o.className = "out"; setTimeout(() => o.remove(), 320); });  // 旧句淡出
+  if (!text) return;
+  const s = document.createElement("span");
+  s.textContent = text;
+  el.appendChild(s);
 }
 
 let lockUntil = 0;
@@ -37,10 +68,11 @@ function setCover(url) {
 
 async function refreshMedia() {
   const m = await fetch("/api/media").then(r => r.json()).catch(() => null);
-  if (!m) { setTitle("未在播放"); $("artist").textContent = "打开 QQ音乐"; setCover(null); $("pp").classList.add("paused"); return; }
+  if (!m) { setTitle("未在播放"); setArtist("打开 QQ音乐"); setCover(null); setLyric(""); $("pp").classList.add("paused"); return; }
+  setLyric(m.lyric);
   setTitle(m.title || "未知歌曲");
-  $("artist").textContent = m.artist || "";
   $("artist").style.display = m.artist ? "" : "none";
+  setArtist(m.artist || "");
   setCover(m.cover);
   if (Date.now() > lockUntil) $("pp").classList.toggle("paused", !m.playing);
 }
@@ -82,6 +114,36 @@ fetch("/api/haze").then(r => r.json()).then(d => { $("haze").value = d.haze; set
 $("haze").oninput = e => setHaze(e.target.value);
 $("haze").onchange = e => fetch("/api/haze?v=" + e.target.value, { method: "POST" });
 
+// 卡片背景透明度滑块（0 全透明，100 不透明）
+const setCard = v => { document.documentElement.style.setProperty("--k", v / 100); $("cv").textContent = v + "%"; };
+fetch("/api/card").then(r => r.json()).then(d => { $("card").value = d.card; setCard(d.card); });
+$("card").oninput = e => setCard(e.target.value);
+$("card").onchange = e => fetch("/api/card?v=" + e.target.value, { method: "POST" });
+
+// 音量条：点或拖轨道调节系统主音量
+const vol = $("vol"), vtr = vol.querySelector(".tr"), vf = vol.querySelector(".f");
+let volDrag = false, volSent = 0;
+function paintVol(level, muted) {
+  const p = muted ? 0 : level;
+  vol.style.setProperty("--p", p);
+  vf.classList.toggle("full", p >= 99);
+  vol.classList.toggle("mute", p === 0);
+}
+const refreshVol = () => { if (!volDrag) fetch("/api/volume").then(r => r.json()).then(d => paintVol(d.level, d.muted)).catch(() => {}); };
+function dragVol(e) {
+  const r = vtr.getBoundingClientRect();
+  const p = Math.round(Math.max(0, Math.min(100, (e.clientX - r.left) / r.width * 100)));
+  paintVol(p, false);
+  if (Date.now() - volSent > 60) { volSent = Date.now(); fetch("/api/volume?level=" + p, { method: "POST" }); }
+  return p;
+}
+vol.onpointerdown = e => {
+  volDrag = true; vol.setPointerCapture(e.pointerId); dragVol(e);
+  vol.onpointermove = dragVol;
+};
+vol.onpointerup = e => { volDrag = false; vol.onpointermove = null; fetch("/api/volume?level=" + dragVol(e), { method: "POST" }); };
+refreshVol(); setInterval(refreshVol, 2000);
+
 // 跟随 Windows 浅色/深色模式
 const refreshTheme = () => fetch("/api/theme").then(r => r.json())
   .then(t => document.documentElement.classList.toggle("dark", !t.light)).catch(() => {});
@@ -102,6 +164,11 @@ function togglePanel() {
   } else {  // 展开动画尚未开始就被再次点击
     p.classList.add("hidden"); reportSize();
   }
+}
+
+// 窗口外点击（由 run.py 检测后调用）：面板已展开则收起
+function collapsePanel() {
+  if ($("panel").classList.contains("show") || !$("panel").classList.contains("hidden")) togglePanel();
 }
 
 // 点击歌曲区展开/收起面板；按住拖动则沿任务栏移动

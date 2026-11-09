@@ -99,9 +99,13 @@ def _vol():
     return AudioUtilities.GetSpeakers().EndpointVolume
 
 
-def volume(delta=None, mute=None):
-    """读取/调节系统主音量。delta 为百分比增量；mute=True 时切换静音。"""
+def volume(delta=None, mute=None, level=None):
+    """读取/调节系统主音量。delta 为百分比增量；level 为 0~100 的绝对值；mute=True 时切换静音。"""
     v = _vol()
+    if level is not None:
+        v.SetMasterVolumeLevelScalar(min(1.0, max(0.0, level / 100)), None)
+        if level > 0:
+            v.SetMute(0, None)
     if delta is not None:
         level = min(1.0, max(0.0, v.GetMasterVolumeLevelScalar() + delta / 100))
         v.SetMasterVolumeLevelScalar(level, None)

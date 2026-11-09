@@ -1,3 +1,4 @@
 __pycache__/
 *.db
 run.log
+app/claude_last.json

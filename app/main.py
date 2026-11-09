@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 
-from . import clash, cover, db, media
+from . import clash, cover, db, lyric, media
 from . import quota as quota_src
 
 app = FastAPI()
@@ -41,6 +41,7 @@ async def get_media():
     if m:
         m["liked"] = db.is_liked(m["title"], m["artist"])
         m["cover"] = cover.get(m["title"], m["artist"])
+        m["lyric"], m["lyric_dur"], m["lyric_at"] = lyric.current(m["title"], m["artist"], m["playing"])
     return m
 
 
@@ -68,8 +69,8 @@ async def get_volume():
 
 
 @app.post("/api/volume")
-async def set_volume(delta: int = 0, mute: bool = False):
-    return media.volume(delta=delta or None, mute=mute)
+async def set_volume(delta: int = 0, mute: bool = False, level: int | None = None):
+    return media.volume(delta=delta or None, mute=mute, level=level)
 
 
 @app.post("/api/like")
@@ -99,6 +100,18 @@ def get_haze():
 def set_haze(v: int):
     db.set_setting("haze", max(0, min(100, v)))
     return get_haze()
+
+
+@app.get("/api/card")
+def get_card():
+    v = db.get_setting("card")
+    return {"card": 55 if v is None else int(v)}
+
+
+@app.post("/api/card")
+def set_card(v: int):
+    db.set_setting("card", max(0, min(100, v)))
+    return get_card()
 
 
 app.mount("/", StaticFiles(directory=Path(__file__).parent.parent / "static", html=True))

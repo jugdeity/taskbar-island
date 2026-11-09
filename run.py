@@ -118,11 +118,24 @@ def keep_on_top():
     cur_x = int(saved) if saved else None
     last_x = None
     hidden = False
+    was_down = False
     while True:
         time.sleep(0.05)
+        hwnd = user32.FindWindowW(None, TITLE)
+        # 点击悬浮窗以外的任何地方：收起面板
+        down = any(user32.GetAsyncKeyState(k) & 0x8000 for k in (0x01, 0x02, 0x04))
+        if down and not was_down and hwnd:
+            p, wr = wintypes.POINT(), wintypes.RECT()
+            user32.GetCursorPos(ctypes.byref(p))
+            user32.GetWindowRect(hwnd, ctypes.byref(wr))
+            if not (wr.left <= p.x < wr.right and wr.top <= p.y < wr.bottom):
+                try:
+                    win.evaluate_js("collapsePanel()")
+                except Exception:
+                    pass
+        was_down = down
         if user32.GetAsyncKeyState(0x01) & 0x8000:  # 鼠标左键按住 = 正在拖动，不干预
             continue
-        hwnd = user32.FindWindowW(None, TITLE)
         if hwnd:
             # 和任务栏同步：全屏 / 任务栏自动隐藏收起时一起隐藏，任务栏出现时恢复
             fs = fullscreen_active() or not taskbar_visible()
