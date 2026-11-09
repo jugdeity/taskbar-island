@@ -131,6 +131,7 @@ def keep_on_top():
                 hidden = fs
             if fs:
                 continue
+            ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 38, ctypes.byref(ctypes.c_int(1)), 4)  # 保持无 Mica
             # 工具窗口：不在任务栏显示图标
             ex = user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
             want = (ex | WS_EX_TOOLWINDOW) & ~WS_EX_APPWINDOW
@@ -173,6 +174,8 @@ if __name__ == "__main__":
             _fields_ = [("l", ctypes.c_int), ("r", ctypes.c_int), ("t", ctypes.c_int), ("b", ctypes.c_int)]
 
         ctypes.windll.dwmapi.DwmExtendFrameIntoClientArea(form.Handle.ToInt32(), ctypes.byref(MARGINS(-1, -1, -1, -1)))
+        # 关闭 Win11 的 Mica 背景（深色模式下会把透明区域画成深灰色，四角出现黑边）
+        ctypes.windll.dwmapi.DwmSetWindowAttribute(form.Handle.ToInt32(), 38, ctypes.byref(ctypes.c_int(1)), 4)
         threading.Thread(target=keep_on_top, daemon=True).start()
 
     webview.start(make_glass, win)

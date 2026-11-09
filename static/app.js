@@ -87,6 +87,23 @@ const refreshTheme = () => fetch("/api/theme").then(r => r.json())
   .then(t => document.documentElement.classList.toggle("dark", !t.light)).catch(() => {});
 refreshTheme(); setInterval(refreshTheme, 2000);
 
+// 展开：先撑开窗口，再播放「自下而上展开」动画；收起：动画播完再缩窗口
+let closeTimer = 0;
+function togglePanel() {
+  const p = $("panel");
+  clearTimeout(closeTimer);
+  if (p.classList.contains("hidden")) {
+    p.classList.remove("hidden");
+    reportSize();
+    setTimeout(() => p.classList.add("show"), 90);  // 等窗口撑开到位
+  } else if (p.classList.contains("show")) {
+    p.classList.remove("show");
+    closeTimer = setTimeout(() => { p.classList.add("hidden"); reportSize(); }, 420);
+  } else {  // 展开动画尚未开始就被再次点击
+    p.classList.add("hidden"); reportSize();
+  }
+}
+
 // 点击歌曲区展开/收起面板；按住拖动则沿任务栏移动
 let down = null;
 document.querySelectorAll(".drag").forEach(el => {
@@ -99,8 +116,7 @@ document.querySelectorAll(".drag").forEach(el => {
 });
 document.addEventListener("mouseup", e => {
   if (down !== null && Math.abs(e.screenX - down) < 4) {
-    $("panel").classList.toggle("hidden");
-    reportSize();  // 内容已在后台预取，立即撑开窗口，不等轮询
+    togglePanel();
   }
   down = null;
 });

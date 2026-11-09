@@ -7,7 +7,9 @@ QQ音乐不向系统注册媒体会话(SMTC)，因此单独处理：
 其他播放器走 SMTC。
 """
 import ctypes
+import os
 import time
+import winreg
 
 from pycaw.pycaw import AudioUtilities, IAudioMeterInformation
 from winrt.windows.media.control import (
@@ -29,6 +31,32 @@ def _qq_title():
     user32.GetWindowTextW(h, buf, 512)
     t = buf.value.strip()
     return t if " - " in t else None
+
+
+def _qq_running():
+    return bool(user32.FindWindowW("QQMusic_Daemon_Wnd", None))
+
+
+def _qq_exe():
+    """从卸载注册表里找 QQ 音乐的安装位置。"""
+    base = r"Software\Microsoft\Windows\CurrentVersion\Uninstall"
+    for root, sub in ((winreg.HKEY_LOCAL_MACHINE, base),
+                      (winreg.HKEY_LOCAL_MACHINE, base.replace("Software\\", "Software\\WOW6432Node\\")),
+                      (winreg.HKEY_CURRENT_USER, base)):
+        try:
+            with winreg.OpenKey(root, sub) as k:
+                for i in range(winreg.QueryInfoKey(k)[0]):
+                    try:
+                        with winreg.OpenKey(k, winreg.EnumKey(k, i)) as s:
+                            if winreg.QueryValueEx(s, "DisplayName")[0] in ("QQ音乐", "QQMusic"):
+                                exe = os.path.join(winreg.QueryValueEx(s, "InstallLocation")[0], "QQMusic.exe")
+                                if os.path.exists(exe):
+                                    return exe
+                    except OSError:
+                        continue
+        except OSError:
+            continue
+    return None
 
 
 def _qq_playing():
@@ -85,6 +113,12 @@ def volume(delta=None, mute=None):
 
 
 async def control(action):
+    # QQ 音乐没开时，点播放键直接打开它
+    if action == "toggle" and not _qq_running():
+        exe = _qq_exe()
+        if exe:
+            os.startfile(exe)
+            return True
     if _qq_title():
         vk = VK[action]
         user32.keybd_event(vk, 0, 1, 0)
