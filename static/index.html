@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>灵动岛</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="root">
+  <div id="panel" class="glass hidden">
+    <div id="cards"></div>
+    <div class="slide"><span>玻璃雾化</span><span class="lab">透明</span><input type="range" id="haze" min="0" max="100"><span class="lab">不透明</span><em id="hv"></em></div>
+  </div>
+  <div id="pill" class="glass">
+    <div class="cover" id="cover"><span>♪</span></div>
+    <div class="txt drag"><div class="t1" id="title">未在播放</div><div class="t2" id="artist">打开 QQ音乐</div></div>
+    <button class="prev" data-act="prev" title="上一首"><svg viewBox="0 0 26 14"><path d="M1 1.8v10.4a1 1 0 0 0 1.6.8l7.2-5.2a1 1 0 0 0 0-1.6L2.6 1A1 1 0 0 0 1 1.8zM14 1.8v10.4a1 1 0 0 0 1.6.8l7.2-5.2a1 1 0 0 0 0-1.6L15.6 1A1 1 0 0 0 14 1.8z"/></svg></button>
+    <button class="play paused" id="pp" data-act="toggle" title="播放/暂停">
+      <svg class="i-play" viewBox="0 0 14 16"><path d="M2.3 1.1A1.2 1.2 0 0 0 .5 2.1v11.8a1.2 1.2 0 0 0 1.8 1L13.2 9a1.2 1.2 0 0 0 0-2.1z"/></svg>
+      <svg class="i-pause" viewBox="0 0 14 16"><rect x="1" y="1" width="3.8" height="14" rx="1.3"/><rect x="9.2" y="1" width="3.8" height="14" rx="1.3"/></svg></button>
+    <button class="next" data-act="next" title="下一首"><svg viewBox="0 0 26 14"><path d="M1 1.8v10.4a1 1 0 0 0 1.6.8l7.2-5.2a1 1 0 0 0 0-1.6L2.6 1A1 1 0 0 0 1 1.8zM14 1.8v10.4a1 1 0 0 0 1.6.8l7.2-5.2a1 1 0 0 0 0-1.6L15.6 1A1 1 0 0 0 14 1.8z"/></svg></button>
+  </div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>

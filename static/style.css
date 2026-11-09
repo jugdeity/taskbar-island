@@ -1,0 +1,50 @@
+/* 液态玻璃：--h 为雾化程度 0~1（0 全透明，1 不透明）；坐标按参考图实测（药丸 387×51） */
+:root{--h:.25;--fg:#000;--sub:rgba(0,0,0,.62);--btn:rgba(60,60,60,.55);--veil:255,255,255;--edge:rgba(255,255,255,.75);--chip:rgba(255,255,255,.55);--track:rgba(0,0,0,.14)}
+:root.dark{--fg:#fff;--sub:rgba(255,255,255,.7);--btn:rgba(255,255,255,.6);--veil:36,36,40;--edge:rgba(255,255,255,.28);--chip:rgba(255,255,255,.26);--track:rgba(255,255,255,.2)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:transparent;overflow:hidden;font:12px "Segoe UI","Microsoft YaHei",sans-serif;user-select:none;color:var(--fg)}
+#root{position:absolute;left:0;bottom:0;width:387px}
+.glass{background:rgba(var(--veil),calc(var(--h)*.95));
+  box-shadow:inset 0 0 0 1px var(--edge),inset 1px 2px 3px rgba(255,255,255,.5),inset -1px -2px 3px rgba(255,255,255,.2)}
+#pill{position:relative;width:387px;height:40px;border-radius:20px}
+.cover{position:absolute;left:14px;top:6px;width:28px;height:28px;border-radius:6px;background:#f6f6f6 center/cover no-repeat;box-shadow:0 1px 3px #0003;display:grid;place-items:center;color:#bbb;font-size:16px}
+.cover.has span{display:none}
+.txt{position:absolute;left:52px;top:0;width:190px;height:40px;display:flex;flex-direction:column;justify-content:center;line-height:16px;font-size:14px;cursor:grab}
+.t1,.t2{white-space:nowrap;overflow:hidden}
+.t1{font-weight:600}.t2{color:var(--fg)}
+.t1 span{display:inline-block}
+.t1.roll span{animation:roll var(--dur) linear infinite}
+@keyframes roll{0%,15%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+#pill button{position:absolute;background:none;border:0;cursor:pointer;display:block}
+#pill svg{display:block;width:100%;height:100%}
+.prev{left:249px;top:13px;width:26px;height:14px;transform:scaleX(-1);fill:var(--btn)}
+.play{left:302px;top:12px;width:14px;height:16px;fill:#000}
+#pill .play svg{position:absolute;inset:0;transition:opacity .22s ease,transform .22s ease;shape-rendering:geometricPrecision}
+.play .i-pause{opacity:1;transform:scale(1)}.play .i-play{opacity:0;transform:scale(.6)}
+.play.paused .i-pause{opacity:0;transform:scale(.6)}.play.paused .i-play{opacity:1;transform:scale(1)}
+.next{left:343px;top:13px;width:26px;height:14px;fill:var(--btn)}
+.dark .play{fill:#fff}
+/* 展开面板 */
+#panel{position:relative;width:387px;padding:14px;border-radius:26px;margin-bottom:8px;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.55),inset 2px 2px 3px rgba(255,255,255,.9),inset -2px -2px 3px rgba(0,0,0,.2)}
+#panel::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.35),rgba(255,255,255,0) 30%)}
+#panel.hidden{display:none}
+.sec{font-size:11px;color:var(--sub);margin:2px 4px 8px;display:flex;justify-content:space-between}
+.card{padding:10px 12px;border-radius:16px;background:var(--chip);margin-bottom:8px}
+.top{display:flex;align-items:center;gap:10px}
+.top .m{flex:1}.top b{font-size:14px}.top small{color:var(--sub);font-size:11px}
+.ring{--p:0;--c:#d97757;width:38px;height:38px;border-radius:50%;background:conic-gradient(var(--c) calc(var(--p)*1%),var(--track) 0);display:grid;place-items:center;flex:none}
+.ring>span{width:30px;height:30px;border-radius:50%;background:#14161e;display:grid;place-items:center;font-size:12px;color:#fff}
+.ring svg{width:16px;height:16px}
+.ring>span.ic-white{background:#fff}.ic-claude{width:20px;height:20px;display:block}
+.ring>span.ic-clash{background:none;overflow:hidden}.ic-clash img{width:30px;height:30px;display:block}
+.bars{margin-top:8px;display:grid;gap:6px}
+.bar{display:grid;grid-template-columns:48px 1fr 104px;align-items:center;gap:8px;font-size:11px}
+.bar i{height:6px;border-radius:3px;background:var(--track);position:relative;overflow:hidden}
+.bar u{position:absolute;left:0;top:0;bottom:0;width:calc(var(--p)*1%);background:var(--c);border-radius:3px}
+.bar span:last-child{text-align:right;color:var(--sub)}
+.nums{display:flex;gap:14px;margin-top:8px}.nums div{flex:1}.nums small{display:block;color:var(--sub);font-size:10px}.nums b{font-size:15px}
+.slide{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:16px;background:var(--chip);font-size:12px}
+.slide .lab{color:var(--sub);font-size:10px}
+.slide input{flex:1;accent-color:var(--fg);height:4px}
+.slide em{font-style:normal;width:34px;text-align:right}
