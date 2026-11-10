@@ -120,7 +120,7 @@ fetch("/api/card").then(r => r.json()).then(d => { $("card").value = d.card; set
 $("card").oninput = e => setCard(e.target.value);
 $("card").onchange = e => fetch("/api/card?v=" + e.target.value, { method: "POST" });
 
-// 音量条：点或拖轨道调节系统主音量
+// 音量条：点或拖轨道调节 QQ音乐 的应用音量（不动系统音量）
 const vol = $("vol"), vtr = vol.querySelector(".tr"), vf = vol.querySelector(".f");
 let volDrag = false, volSent = 0;
 function paintVol(level, muted) {

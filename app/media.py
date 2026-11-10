@@ -6,11 +6,14 @@ QQ音乐不向系统注册媒体会话(SMTC)，因此单独处理：
 - 控制：发送键盘媒体键（播放/暂停、上一首、下一首）
 其他播放器走 SMTC。
 """
+import asyncio
 import ctypes
 import os
+import threading
 import time
 import winreg
 
+import comtypes
 from pycaw.pycaw import AudioUtilities, IAudioMeterInformation
 from winrt.windows.media.control import (
     GlobalSystemMediaTransportControlsSessionManager as Manager,
@@ -73,9 +76,26 @@ def _qq_playing():
     return False
 
 
+_smtc_ok = True
+
+
+async def _wait(op):
+    """等 WinRT 异步操作，最多 1 秒。有的机器上它永远不完成（取消也会卡住），
+    所以不用 wait_for；超时后不再尝试 SMTC。"""
+    global _smtc_ok
+    task = asyncio.ensure_future(op)
+    done, _ = await asyncio.wait({task}, timeout=1)
+    if not done:
+        _smtc_ok = False
+        return None
+    return task.result()
+
+
 async def _session():
-    mgr = await Manager.request_async()
-    return mgr.get_current_session()
+    if not _smtc_ok:
+        return None
+    mgr = await _wait(Manager.request_async())
+    return mgr.get_current_session() if mgr else None
 
 
 async def info():
@@ -86,7 +106,9 @@ async def info():
     s = await _session()
     if not s:
         return None
-    p = await s.try_get_media_properties_async()
+    p = await _wait(s.try_get_media_properties_async())
+    if not p:
+        return None
     return {
         "app": s.source_app_user_model_id,
         "title": p.title,
@@ -95,38 +117,78 @@ async def info():
     }
 
 
-def _vol():
-    return AudioUtilities.GetSpeakers().EndpointVolume
+def _qq_volumes():
+    return [s.SimpleAudioVolume for s in AudioUtilities.GetAllSessions()
+            if s.Process and s.Process.name().lower() == "qqmusic.exe"]
+
+
+_last = {"level": 100, "muted": False}
+_dirty = False  # QQ 音乐没出声时调过音量，等它的音频会话出现后再应用
 
 
 def volume(delta=None, mute=None, level=None):
-    """读取/调节系统主音量。delta 为百分比增量；level 为 0~100 的绝对值；mute=True 时切换静音。"""
-    v = _vol()
-    if level is not None:
-        v.SetMasterVolumeLevelScalar(min(1.0, max(0.0, level / 100)), None)
-        if level > 0:
-            v.SetMute(0, None)
+    """读取/调节 QQ 音乐的应用音量（音量合成器里那一项），不动系统主音量。
+    delta 为百分比增量；level 为 0~100 的绝对值；mute=True 时切换静音。"""
+    global _dirty
+    vs = _qq_volumes()
+    if vs and not _dirty:
+        _last["level"] = round(vs[0].GetMasterVolume() * 100)
+        _last["muted"] = bool(vs[0].GetMute())
     if delta is not None:
-        level = min(1.0, max(0.0, v.GetMasterVolumeLevelScalar() + delta / 100))
-        v.SetMasterVolumeLevelScalar(level, None)
-        if level > 0:
-            v.SetMute(0, None)
+        level = _last["level"] + delta
+    change = level is not None or bool(mute)
+    if level is not None:
+        _last["level"] = min(100, max(0, level))
+        if _last["level"] > 0:
+            _last["muted"] = False
     if mute:
-        v.SetMute(0 if v.GetMute() else 1, None)
-    return {"level": round(v.GetMasterVolumeLevelScalar() * 100), "muted": bool(v.GetMute())}
+        _last["muted"] = not _last["muted"]
+    if change or _dirty:
+        for v in vs:
+            v.SetMasterVolume(_last["level"] / 100, None)
+            v.SetMute(int(_last["muted"]), None)
+        _dirty = not vs
+    return dict(_last)
+
+
+def _key(action):
+    vk = VK[action]
+    user32.keybd_event(vk, 0, 1, 0)
+    user32.keybd_event(vk, 0, 3, 0)
+
+
+_launching = False
+
+
+def _autoplay():
+    """QQ 音乐启动后，等它载入歌曲再自动按一次播放。"""
+    global _launching
+    comtypes.CoInitialize()
+    try:
+        end = time.time() + 30
+        while time.time() < end and not _qq_title():
+            time.sleep(0.5)
+        time.sleep(1.5)
+        if _qq_running() and not _qq_playing():
+            _key("toggle")
+    finally:
+        _launching = False
 
 
 async def control(action):
-    # QQ 音乐没开时，点播放键直接打开它
+    # QQ 音乐没开时，点播放键直接打开它并自动开始播放
+    global _launching
     if action == "toggle" and not _qq_running():
+        if _launching:
+            return True
         exe = _qq_exe()
         if exe:
+            _launching = True
             os.startfile(exe)
+            threading.Thread(target=_autoplay, daemon=True).start()
             return True
     if _qq_title():
-        vk = VK[action]
-        user32.keybd_event(vk, 0, 1, 0)
-        user32.keybd_event(vk, 0, 3, 0)
+        _key(action)
         return True
     s = await _session()
     if not s:
@@ -136,4 +198,4 @@ async def control(action):
         "next": s.try_skip_next_async,
         "prev": s.try_skip_previous_async,
     }[action]
-    return await fn()
+    return bool(await _wait(fn()))
