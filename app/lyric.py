@@ -44,12 +44,17 @@ def _fetch(key):
         songs = _req(f"https://c.y.qq.com/soso/fcgi-bin/client_search_cp?w={q}&format=json&n=5&p=1")["data"]["song"]["list"]
         if songs:
             hit = next((s for s in songs if s["songname"].strip().lower() == title.strip().lower()), songs[0])
-            body = json.dumps({"comm": {"ct": 24, "cv": 0}, "req": {
-                "module": "music.musichallSong.PlayLyricInfo", "method": "GetPlayLyricInfo",
-                "param": {"songMID": hit["songmid"], "songID": 0}}}).encode()
-            lrc = _req("https://u.y.qq.com/cgi-bin/musicu.fcg", body)["req"]["data"].get("lyric", "")
-            if lrc:
-                lines = _parse(base64.b64decode(lrc).decode("utf-8", "replace"))
+            # 有的版本接口不给歌词：再试搜索结果里同名（括号前相同）的其他版本
+            base = lambda n: n.split("(")[0].strip().lower()
+            for s in [hit] + [s for s in songs if s is not hit and base(s["songname"]) == base(hit["songname"])]:
+                body = json.dumps({"comm": {"ct": 24, "cv": 0}, "req": {
+                    "module": "music.musichallSong.PlayLyricInfo", "method": "GetPlayLyricInfo",
+                    "param": {"songMID": s["songmid"], "songID": 0}}}).encode()
+                lrc = (_req("https://u.y.qq.com/cgi-bin/musicu.fcg", body)["req"].get("data") or {}).get("lyric", "")
+                if lrc:
+                    lines = _parse(base64.b64decode(lrc).decode("utf-8", "replace"))
+                if lines:
+                    break
     except Exception:
         pass
     _cache[key] = lines
