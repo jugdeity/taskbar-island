@@ -1,5 +1,6 @@
 """启动 FastAPI 并在任务栏上方创建常驻无边框窗口。"""
 import ctypes
+import math
 import threading
 import time
 from ctypes import wintypes
@@ -37,8 +38,9 @@ def island_rect(x=None):
     r = wintypes.RECT()
     user32.GetWindowRect(user32.FindWindowW("Shell_TrayWnd", None), ctypes.byref(r))
     scale = user32.GetDpiForSystem() / 96
-    w, h0 = int(W * scale), int(H * scale)
-    ex = int(EXTRA * scale)
+    # 向上取整：窗口不能比网页内容窄，否则药丸右端的描边会被裁掉（150% 时 387×1.5=580.5）
+    w, h0 = math.ceil(W * scale), math.ceil(H * scale)
+    ex = math.ceil(EXTRA * scale)
     if x is None:
         x = int(r.left + (r.right - r.left) * X_RATIO - w / 2)
     x = max(r.left, min(x, r.right - w))  # 限制在任务栏内
