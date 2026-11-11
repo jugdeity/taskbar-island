@@ -2,7 +2,7 @@
 
 QQ音乐不向系统注册媒体会话(SMTC)，因此单独处理：
 - 歌曲：读 QQ音乐隐藏窗口 QQMusic_Daemon_Wnd 的标题（"歌名 - 歌手"）
-- 播放状态：用系统音频电平判断 QQMusic.exe 是否在出声
+- 播放状态：QQMusic.exe 的音频会话处于 Active 且有电平
 - 控制：发送键盘媒体键（播放/暂停、上一首、下一首）
 其他播放器走 SMTC。
 """
@@ -62,18 +62,44 @@ def _qq_exe():
     return None
 
 
-def _qq_playing():
+def _qq_sessions():
+    """QQMusic.exe 的音频会话。已退出进程留下的过期会话取进程名会抛异常，
+    必须逐个跳过——否则排在它后面的 QQ 音乐会话永远读不到。"""
+    out = []
     try:
-        for s in AudioUtilities.GetAllSessions():
-            if s.Process and s.Process.name().lower() == "qqmusic.exe":
-                m = s._ctl.QueryInterface(IAudioMeterInformation)
-                for _ in range(4):
-                    if m.GetPeakValue() > 0.0005:
-                        return True
-                    time.sleep(0.03)
+        sessions = AudioUtilities.GetAllSessions()
     except Exception:
-        pass
-    return False
+        return out
+    for s in sessions:
+        try:
+            if s.Process and s.Process.name().lower() == "qqmusic.exe":
+                out.append(s)
+        except Exception:
+            continue
+    return out
+
+
+_last_sound = 0.0
+
+
+def _qq_playing():
+    """会话 Active 且有电平 = 播放中。暂停后会话还会保持 Active 十几秒，所以不能只看状态；
+    电平取的是应用音量之前的值，静音/音量为 0 时照样有读数。
+    歌曲里短暂的无声段落：2 秒内出过声仍算播放中，避免图标闪跳。"""
+    global _last_sound
+    for s in _qq_sessions():
+        try:
+            if s.State != 1:  # 1 = AudioSessionStateActive
+                continue
+            m = s._ctl.QueryInterface(IAudioMeterInformation)
+            for _ in range(4):
+                if m.GetPeakValue() > 0.0005:
+                    _last_sound = time.time()
+                    return True
+                time.sleep(0.03)
+        except Exception:
+            continue
+    return time.time() - _last_sound < 2
 
 
 _smtc_ok = True
@@ -118,8 +144,7 @@ async def info():
 
 
 def _qq_volumes():
-    return [s.SimpleAudioVolume for s in AudioUtilities.GetAllSessions()
-            if s.Process and s.Process.name().lower() == "qqmusic.exe"]
+    return [s.SimpleAudioVolume for s in _qq_sessions()]
 
 
 _last = {"level": 100, "muted": False}
