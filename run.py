@@ -111,6 +111,24 @@ def taskbar_visible():
     return vw > 0 and vh > 0 and vw * vh * 2 >= (r.right - r.left) * (r.bottom - r.top)
 
 
+class BLURBEHIND(ctypes.Structure):
+    _fields_ = [("flags", wintypes.DWORD), ("enable", wintypes.BOOL),
+                ("rgn", wintypes.HANDLE), ("transition", wintypes.BOOL)]
+
+
+ctypes.windll.gdi32.CreateRectRgn.restype = wintypes.HANDLE
+ctypes.windll.gdi32.DeleteObject.argtypes = [wintypes.HANDLE]
+ctypes.windll.dwmapi.DwmEnableBlurBehindWindow.argtypes = [wintypes.HWND, ctypes.POINTER(BLURBEHIND)]
+
+
+def see_through(hwnd):
+    """配合 DwmExtendFrameIntoClientArea 开启逐像素透明：空区域的 blur-behind 不产生模糊，
+    但让 DWM 按像素 alpha 合成。只扩展框架时 Win11 会把透明区画成纯黑。"""
+    rgn = ctypes.windll.gdi32.CreateRectRgn(0, 0, -1, -1)
+    ctypes.windll.dwmapi.DwmEnableBlurBehindWindow(hwnd, ctypes.byref(BLURBEHIND(0x1 | 0x2, 1, rgn, 0)))  # ENABLE|BLURREGION
+    ctypes.windll.gdi32.DeleteObject(rgn)
+
+
 def keep_on_top():
     # 每秒强制位置/尺寸并置顶（点击任务栏后系统会把任务栏提到最前）
     HWND_TOPMOST, NOACTIVATE = -1, 0x0010
@@ -144,6 +162,8 @@ def keep_on_top():
             if fs != hidden:
                 user32.ShowWindow(hwnd, 0 if fs else 4)  # SW_HIDE / SW_SHOWNOACTIVATE
                 hidden = fs
+                if not fs:
+                    see_through(hwnd)
             if fs:
                 continue
             ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 38, ctypes.byref(ctypes.c_int(1)), 4)  # 保持无 Mica
@@ -154,6 +174,7 @@ def keep_on_top():
                 user32.ShowWindow(hwnd, 0)
                 user32.SetWindowLongW(hwnd, GWL_EXSTYLE, want)
                 user32.ShowWindow(hwnd, 4)  # SW_SHOWNOACTIVATE
+                see_through(hwnd)
             r = wintypes.RECT()
             user32.GetWindowRect(hwnd, ctypes.byref(r))
             if last_x is not None and abs(r.left - last_x) > 1:  # 用户拖动过：记住新位置
@@ -189,6 +210,7 @@ if __name__ == "__main__":
             _fields_ = [("l", ctypes.c_int), ("r", ctypes.c_int), ("t", ctypes.c_int), ("b", ctypes.c_int)]
 
         ctypes.windll.dwmapi.DwmExtendFrameIntoClientArea(form.Handle.ToInt32(), ctypes.byref(MARGINS(-1, -1, -1, -1)))
+        see_through(form.Handle.ToInt32())
         # 关闭 Win11 的 Mica 背景（深色模式下会把透明区域画成深灰色，四角出现黑边）
         ctypes.windll.dwmapi.DwmSetWindowAttribute(form.Handle.ToInt32(), 38, ctypes.byref(ctypes.c_int(1)), 4)
         threading.Thread(target=keep_on_top, daemon=True).start()
