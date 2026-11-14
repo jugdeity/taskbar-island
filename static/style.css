@@ -67,6 +67,8 @@ html,body{background:transparent;overflow:hidden;font:12px "Segoe UI","Microsoft
 .bar i{height:6px;border-radius:3px;background:var(--track);position:relative;overflow:hidden}
 .bar u{position:absolute;left:0;top:0;bottom:0;width:calc(var(--p)*1%);background:var(--c);border-radius:3px}
 .bar span:last-child{text-align:right;color:var(--sub)}
+.top small.sub{display:block}
+.spd{display:grid;text-align:right;font-size:12px;font-variant-numeric:tabular-nums;color:var(--sub)}
 .nums{display:flex;gap:14px;margin-top:8px}.nums div{flex:1}.nums small{display:block;color:var(--sub);font-size:10px}.nums b{font-size:15px}
 .slide{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:16px;background:transparent;font-size:12px}
 .slide.cs{margin-bottom:8px}

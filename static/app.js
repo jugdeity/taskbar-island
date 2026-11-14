@@ -1,7 +1,8 @@
 const $ = id => document.getElementById(id);
 const api = () => window.pywebview && window.pywebview.api;
 const GB = 1024 ** 3;
-const fmt = b => b >= 1024 ** 4 ? (b / 1024 ** 4).toFixed(2) + " TB" : b >= GB * 100 ? Math.round(b / GB) + " GB" : (b / GB).toFixed(1) + " GB";
+const fmt = b => b >= 1024 ** 4 ? (b / 1024 ** 4).toFixed(2) + " TB" : b >= GB * 100 ? Math.round(b / GB) + " GB" : b >= GB ? (b / GB).toFixed(1) + " GB" : Math.round(b / 1024 ** 2) + " MB";
+const spd = b => b >= 1024 ** 2 ? (b / 1024 ** 2).toFixed(1) + " MB/s" : b >= 1024 ? Math.round(b / 1024) + " KB/s" : b + " B/s";
 const IC = {
   claude: `<img src="claude.svg" class="ic-claude">`,
   codex: `<svg viewBox="0 0 24 24" fill="none" stroke="#e5e7eb" stroke-width="2.6" stroke-linecap="round"><path d="M4 7l5 5-5 5M12 18h8"/></svg>`,
@@ -99,13 +100,22 @@ function clashCard(s) {
     <div class="nums"><div><small>今日</small><b>${fmt(s.today)}</b></div><div><small>本周期已用</small><b>${fmt(s.used)}</b></div><div><small>套餐 ${fmt(s.total)}</small><b>剩 ${fmt(s.left)}</b></div></div>
     <div class="bars">${bar("↑ 上传", (tot ? Math.round(s.up / tot * 100) : 0), "#4cc9f0", fmt(s.up))}${bar("↓ 下载", (tot ? Math.round(s.down / tot * 100) : 0), "#7b8cff", fmt(s.down))}</div></div>`;
 }
+function v2rayCard(s) {
+  const tot = s.up + s.down;
+  return `<div class="card"><div class="top"><div class="ring" style="--p:${s.percent};--c:#a78bfa"><span>V2</span></div>
+    <div class="m"><b>V2Ray 流量</b><small class="sub">已用 ${s.percent}% · ${s.reset}</small></div>
+    <div class="spd"><span>↑ ${spd(s.up_speed)}</span><span>↓ ${spd(s.down_speed)}</span></div></div>
+    <div class="nums"><div><small>今日</small><b>${fmt(s.today)}</b></div><div><small>本周期已用</small><b>${fmt(s.used)}</b></div><div><small>套餐 ${fmt(s.total)}</small><b>剩 ${fmt(s.left)}</b></div></div>
+    <div class="bars">${bar("↑ 上传", (tot ? Math.round(s.up / tot * 100) : 0), "#a78bfa", fmt(s.up))}${bar("↓ 下载", (tot ? Math.round(s.down / tot * 100) : 0), "#7b8cff", fmt(s.down))}</div></div>`;
+}
 async function refreshPanel() {
-  const [q, c] = await Promise.all([
+  const [q, c, v] = await Promise.all([
     fetch("/api/quota").then(r => r.json()).catch(() => []),
-    fetch("/api/clash").then(r => r.json()).catch(() => null)]);
+    fetch("/api/clash").then(r => r.json()).catch(() => null),
+    fetch("/api/v2ray").then(r => r.json()).catch(() => null)]);
   $("cards").innerHTML = (q.length ? q.map(agentCard).join("") : "") +
-    (c ? clashCard(c) : "") +
-    (!q.length && !c ? `<div class="sec"><span>没有正在运行的软件</span></div>` : "");
+    (c ? clashCard(c) : "") + (v ? v2rayCard(v) : "") +
+    (!q.length && !c && !v ? `<div class="sec"><span>没有正在运行的软件</span></div>` : "");
 }
 
 // 雾化滑块
@@ -198,4 +208,4 @@ setInterval(reportSize, 150);
 
 refreshMedia(); refreshPanel();
 setInterval(refreshMedia, 1000);
-setInterval(refreshPanel, 5000);
+setInterval(refreshPanel, 1000);  // 1 秒刷新，V2Ray 实时速度才跟得上

@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 
-from . import clash, cover, db, lyric, media
+from . import clash, cover, db, lyric, media, v2ray
 from . import quota as quota_src
 
 app = FastAPI()
@@ -32,6 +32,7 @@ def _quota_loop():
 @app.on_event("startup")
 def _start():
     clash.start()
+    v2ray.start()
     threading.Thread(target=_quota_loop, daemon=True).start()
 
 
@@ -89,6 +90,11 @@ def quota():
 @app.get("/api/clash")
 def clash_stats():
     return clash.stats()
+
+
+@app.get("/api/v2ray")
+def v2ray_stats():
+    return v2ray.stats()
 
 
 @app.get("/api/haze")
