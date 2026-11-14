@@ -41,7 +41,7 @@ async def get_media():
     if m:
         m["liked"] = db.is_liked(m["title"], m["artist"])
         m["cover"] = cover.get(m["title"], m["artist"])
-        m["lyric"], m["lyric_dur"], m["lyric_at"] = lyric.current(m["title"], m["artist"], m["playing"])
+        m["lyric"], m["lyric_dur"], m["lyric_at"] = lyric.current(m["title"], m["artist"], m["playing"], m.get("pos"))
     return m
 
 

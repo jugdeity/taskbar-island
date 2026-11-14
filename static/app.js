@@ -68,7 +68,7 @@ function setCover(url) {
 
 async function refreshMedia() {
   const m = await fetch("/api/media").then(r => r.json()).catch(() => null);
-  if (!m) { setTitle("未在播放"); setArtist("打开 QQ音乐"); setCover(null); setLyric(""); $("pp").classList.add("paused"); return; }
+  if (!m) { setTitle("未在播放"); setArtist("打开 Spotify"); setCover(null); setLyric(""); $("pp").classList.add("paused"); return; }
   setLyric(m.lyric);
   setTitle(m.title || "未知歌曲");
   $("artist").style.display = m.artist ? "" : "none";
@@ -120,7 +120,7 @@ fetch("/api/card").then(r => r.json()).then(d => { $("card").value = d.card; set
 $("card").oninput = e => setCard(e.target.value);
 $("card").onchange = e => fetch("/api/card?v=" + e.target.value, { method: "POST" });
 
-// 音量条：点或拖轨道调节 QQ音乐 的应用音量（不动系统音量）
+// 音量条：点或拖轨道调节 Spotify 的应用音量（不动系统音量）
 const vol = $("vol"), vtr = vol.querySelector(".tr"), vf = vol.querySelector(".f");
 let volDrag = false, volSent = 0;
 function paintVol(level, muted) {

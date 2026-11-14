@@ -61,11 +61,14 @@ def _fetch(key):
     _pending.discard(key)
 
 
-def current(title, artist, playing):
-    """返回 (当前歌词, 本句时长, 本句已播秒数)；没有则歌词为空串。每次轮询调用一次以累计播放进度。"""
+def current(title, artist, playing, pos=None):
+    """返回 (当前歌词, 本句时长, 本句已播秒数)；没有则歌词为空串。每次轮询调用一次以累计播放进度。
+    pos 是播放器给的真实进度（Spotify 有），给了就直接用。"""
     key = (title or "", artist or "")
     now = time.time()
-    if _state["key"] != key:
+    if pos is not None:
+        _state.update(key=key, pos=pos, t=now)
+    elif _state["key"] != key:
         _state.update(key=key, pos=0.0, t=now)
     else:
         dt = now - _state["t"]
