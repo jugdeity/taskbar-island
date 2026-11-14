@@ -102,7 +102,7 @@ function clashCard(s) {
 }
 function v2rayCard(s) {
   const tot = s.up + s.down;
-  return `<div class="card"><div class="top"><div class="ring" style="--p:${s.percent};--c:#a78bfa"><span>V2</span></div>
+  return `<div class="card"><div class="top"><div class="ring" style="--p:${s.percent};--c:#a78bfa"><span class="ic-v2ray"><img src="v2rayn.png"></span></div>
     <div class="m"><b>V2Ray 流量</b><small class="sub">已用 ${s.percent}% · ${s.reset}</small></div>
     <div class="spd"><span>↑ ${spd(s.up_speed)}</span><span>↓ ${spd(s.down_speed)}</span></div></div>
     <div class="nums"><div><small>今日</small><b>${fmt(s.today)}</b></div><div><small>本周期已用</small><b>${fmt(s.used)}</b></div><div><small>套餐 ${fmt(s.total)}</small><b>剩 ${fmt(s.left)}</b></div></div>

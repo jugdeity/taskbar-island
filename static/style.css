@@ -61,7 +61,7 @@ html,body{background:transparent;overflow:hidden;font:12px "Segoe UI","Microsoft
 .ring>span{width:30px;height:30px;border-radius:50%;background:#14161e;display:grid;place-items:center;font-size:12px;color:#fff}
 .ring svg{width:16px;height:16px}
 .ring>span.ic-white{background:#fff}.ic-claude{width:20px;height:20px;display:block}
-.ring>span.ic-clash{background:none;overflow:hidden}.ic-clash img{width:30px;height:30px;display:block}
+.ring>span.ic-clash,.ring>span.ic-v2ray{background:none;overflow:hidden}.ic-clash img,.ic-v2ray img{width:30px;height:30px;display:block}
 .bars{margin-top:8px;display:grid;gap:6px}
 .bar{display:grid;grid-template-columns:48px 1fr 104px;align-items:center;gap:8px;font-size:11px}
 .bar i{height:6px;border-radius:3px;background:var(--track);position:relative;overflow:hidden}
